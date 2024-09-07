@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Food Rating</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .login {
+            border: 2px solid black;
+            width: 400px;
+            align: centre;
+            height: 400px;
+            background: url('new.jpg');
+            color: white;
+            border-radius: 20px;
+            box-shadow: 0px 0px rgba(0,0,0,0.75);
+            background-size: cover;
+            overflow: hidden;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        h2 {
+            font-weight: normal;
+            font-size: 24px;
+            text-shadow: 0px 0px 2px rgba(0,0,0,0.5);
+            margin-bottom: 60px;
+        }
+
+        label {
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 2px;
+            padding-left: 10px;
+        }
+
+        input[type="text"], input[type="password"], textarea {
+            background: rgba(255, 255, 255, 0.3);
+            height: 40px;
+            line-height: 40px;
+            border-radius: 20px;
+            padding: 0px 20px;
+            border: none;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        button {
+            background: rgb(45, 126, 231);
+            height: 40px;
+            line-height: 40px;
+            border-radius: 40px;
+            border: none;
+            margin: 10px 0px;
+            box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
+            color: white;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .star {
+            font-size: 30px;
+            cursor: pointer;
+            color: gray;
+        }
+
+        .star:hover {
+            color: gold;
+        }
+
+        #rating-error, #login-error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        textarea {
+            resize: none;
+            height: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container" class="login">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="login-error"></p>
+    </div>
+
+    <div id="rating-container" style="display:none;">
+        <h2>Rate the Food</h2>
+        <div id="stars">
+            <span class="star" onclick="rate(1)">★</span>
+            <span class="star" onclick="rate(2)">★</span>
+            <span class="star" onclick="rate(3)">★</span>
+            <span class="star" onclick="rate(4)">★</span>
+            <span class="star" onclick="rate(5)">★</span>
+        </div>
+        <textarea id="comment" placeholder="Leave a comment..."></textarea>
+        <button onclick="submitRating()">Submit Rating</button>
+        <p id="rating-error"></p>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLJ_T8F6RJD_1-CWe1sSIb4U5zzNO-xSo",
+            authDomain: "hostelmessfoodrating.firebaseapp.com",
+            projectId: "hostelmessfoodrating",
+            storageBucket: "hostelmessfoodrating.appspot.com",
+            messagingSenderId: "5650542879",
+            appId: "1:5650542879:web:c6d5c0ef3f0d9118a2802a"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let lastRatingTime = 0;
+
+        // Valid users
+        const users = [
+            { username: 'beinghayat', password: 'beinghayat96' },
+            { username: 'divyanshu', password: 'divyanshu96' },
+            { username: 'wafa', password: 'wafa96' },
+            { username: 'rajnish', password: 'rajnish96' },
+            { username: 'kashish', password: 'kashish96' }
+        ];
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const user = users.find(user => user.username === username && user.password === password);
+
+            if (user) {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('rating-container').style.display = 'block';
+            } else {
+                document.getElementById('login-error').innerText = 'Invalid username or password';
+            }
+        }
+
+        function rate(stars) {
+            const starElements = document.querySelectorAll('.star');
+            starElements.forEach((star, index) => {
+                star.style.color = index < stars ? 'gold' : 'gray';
+            });
+            window.selectedRating = stars;
+        }
+
+        async function submitRating() {
+            const comment = document.getElementById('comment').value;
+            const currentTime = Date.now();
+
+            if (currentTime - lastRatingTime < 4 * 60 * 60 * 1000) {
+                document.getElementById('rating-error').innerText = 'You can only rate once every 4 hours.';
+                return;
+            }
+
+            await db.collection('ratings').add({
+                username: document.getElementById('username').value,
+                rating: window.selectedRating,
+                comment: comment,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            lastRatingTime = currentTime;
+            alert('Rating submitted successfully!');
+            window.location.href = 'show.html'; // Redirect to show page
+        }
+    </script>
+</body>
+</html>
